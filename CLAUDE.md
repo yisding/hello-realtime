@@ -31,17 +31,12 @@ framework for routing.
    - Handles SDP offer/answer exchange
    - Triggers observer WebSocket connection
 
-3. **SIP Route** (`routes/sip.ts`)
-   - Webhook endpoint for incoming phone calls
-   - Verifies signatures using Svix
-   - Accepts calls and triggers observer
-
-4. **Observer Route** (`routes/observer.ts`)
+3. **Observer Route** (`routes/observer.ts`)
    - Establishes WebSocket connection to OpenAI
    - Monitors call events and transcripts
    - Auto-sends `response.create` after connection
 
-5. **Utilities** (`routes/utils.ts`)
+4. **Utilities** (`routes/utils.ts`)
    - `makeHeaders()`: Adds OpenAI API authentication
    - `makeSession()`: Configures Realtime session with model, instructions, and
      voice settings
