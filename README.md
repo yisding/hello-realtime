@@ -1,7 +1,8 @@
 # hello-realtime-video
 
 Hello Realtime is a complete OpenAI Realtime application that supports WebRTC
-users. You can access the app via WebRTC at https://hello-realtime-video.val.run.
+users. You can access the app via WebRTC at
+https://hello-realtime-video.val.run.
 
 This demo shows off the new all-in-one WebRTC API and the new server-side
 websocket interface.

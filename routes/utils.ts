@@ -24,7 +24,7 @@ export function makeSession(video: boolean) {
       input: { noise_reduction: { type: "near_field" } },
       output: { voice: VOICE },
     },
-  }
+  };
 
   if (video) {
     session["video"] = {

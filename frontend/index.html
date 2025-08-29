@@ -218,6 +218,30 @@
         display: none;
       }
 
+      .footer {
+        text-align: center;
+        padding: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .view-source-link {
+        display: inline-block;
+        padding: 8px 16px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 13px;
+        transition: all 0.2s;
+      }
+
+      .view-source-link:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.15);
+        color: var(--fg);
+      }
+
       /* Desktop styles */
       @media (min-width: 768px) {
         .toolbar {
@@ -331,6 +355,16 @@
     </div>
 
     <audio id="remoteAudio" autoplay playsinline></audio>
+
+    <div class="footer">
+      <a
+        href="https://www.val.town/x/yisding/hello-realtime-video"
+        target="_blank"
+        class="view-source-link"
+      >
+        View Source →
+      </a>
+    </div>
 
     <script>
       const $ = (id) => document.getElementById(id);
@@ -547,11 +581,14 @@
         // 6) POST SDP offer to /rtc immediately (WHIP-style).
         // Server will provide the session configuration.
         try {
-          const resp = await fetch(videoMode !== "none" ? "/rtc?video=true" : "/rtc", {
-            method: "POST",
-            headers: { "Content-Type": "application/sdp" },
-            body: offer.sdp,
-          });
+          const resp = await fetch(
+            videoMode !== "none" ? "/rtc?video=true" : "/rtc",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/sdp" },
+              body: offer.sdp,
+            },
+          );
 
           if (!resp.ok) {
             const errText = await resp.text().catch(() => "<no body>");
