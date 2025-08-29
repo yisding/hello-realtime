@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenAI Realtime API Voice Agent</title>
+    <style>
+      :root {
+        --bg: #0b1220;
+        --fg: #e8eefc;
+        --muted: #9fb0d4;
+        --accent: #6aa1ff;
+        --success: #22c55e;
+        --warning: #f59e0b;
+      }
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Helvetica, Arial;
+        background: var(--bg);
+        color: var(--fg);
+        display: flex;
+        flex-direction: column;
+      }
+      .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        background: rgba(255, 255, 255, 0.04);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+      }
+      .toolbar-left {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+      .toolbar-right {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .status-led {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--muted);
+        transition: background-color 0.3s ease;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+      }
+      .status-led.connected {
+        background: var(--success);
+        box-shadow:
+          0 0 0 2px rgba(34, 197, 94, 0.3),
+          0 0 8px rgba(34, 197, 94, 0.4);
+      }
+      .status-led.connecting {
+        background: var(--warning);
+        box-shadow:
+          0 0 0 2px rgba(245, 158, 11, 0.3),
+          0 0 8px rgba(245, 158, 11, 0.4);
+        animation: pulse 1.5s infinite;
+      }
+      @keyframes pulse {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+      .status-text {
+        font-size: 13px;
+        color: var(--muted);
+        min-width: 80px;
+      }
+      button {
+        appearance: none;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: transparent;
+        color: var(--fg);
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+      }
+      button.primary {
+        background: var(--accent);
+        color: #021226;
+        border-color: transparent;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .logs-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 20px;
+        overflow: hidden;
+      }
+      .logs-header {
+        margin: 0 0 12px 0;
+        font-size: 14px;
+        color: var(--muted);
+        font-weight: 600;
+      }
+      .logs {
+        flex: 1;
+        background: rgba(0, 0, 0, 0.35);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        padding: 16px;
+        overflow-y: auto;
+        font-family:
+          "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas,
+          "Courier New", monospace;
+        font-size: 13px;
+        line-height: 1.4;
+        white-space: pre-wrap;
+      }
+      .log-entry {
+        margin-bottom: 4px;
+      }
+      .log-timestamp {
+        color: var(--muted);
+        opacity: 0.7;
+      }
+      .log-message {
+        color: var(--fg);
+      }
+      audio {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <h1>Realtime Agent</h1>
+        <button id="btnStart" class="primary">Start</button>
+      </div>
+      <div class="toolbar-right">
+        <span class="status-text" id="statusText">Disconnected</span>
+        <div class="status-led" id="statusLed"></div>
+      </div>
+    </div>
+
+    <div class="logs" id="logs"></div>
+
+    <audio id="remoteAudio" autoplay playsinline></audio>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const logsEl = $("logs");
+      const statusTextEl = $("statusText");
+      const statusLedEl = $("statusLed");
+      const audioEl = $("remoteAudio");
+      const btnStart = $("btnStart");
+
+      let pc = null;
+      let localStream = null;
+      let isConnected = false;
+      let callStartTime = null;
+
+      function formatTimestamp() {
+        if (!callStartTime) {
+          return "00:00.000";
+        }
+
+        const elapsed = Date.now() - callStartTime;
+        const minutes = Math.floor(elapsed / 60000);
+        const seconds = Math.floor((elapsed % 60000) / 1000);
+        const millis = elapsed % 1000;
+
+        return `${minutes.toString().padStart(2, "0")}:${
+          seconds.toString().padStart(2, "0")
+        }.${millis.toString().padStart(3, "0")}`;
+      }
+
+      function log(...args) {
+        const timestamp = formatTimestamp();
+        const message = args.map(
+          (a) => (typeof a === "string" ? a : JSON.stringify(a)),
+        ).join(" ");
+
+        const logEntry = document.createElement("div");
+        logEntry.className = "log-entry";
+        logEntry.innerHTML =
+          `<span class="log-timestamp">[${timestamp}]</span> <span class="log-message">${message}</span>`;
+
+        logsEl.appendChild(logEntry);
+        logsEl.scrollTop = logsEl.scrollHeight;
+        console.log(`[${timestamp}]`, ...args);
+      }
+
+      function setStatus(status, ledState = "disconnected") {
+        statusTextEl.textContent = status;
+        statusLedEl.className = `status-led ${ledState}`;
+
+        if (ledState === "connected") {
+          isConnected = true;
+          btnStart.textContent = "Stop";
+          btnStart.disabled = false;
+        } else if (ledState === "connecting") {
+          isConnected = false;
+          btnStart.textContent = "Start";
+          btnStart.disabled = true;
+        } else {
+          isConnected = false;
+          btnStart.textContent = "Start";
+          btnStart.disabled = false;
+        }
+      }
+
+      async function start() {
+        if (pc) {
+          // If already connected, this is a stop action
+          await stop();
+          return;
+        }
+
+        // Initialize call start time and clear logs
+        callStartTime = Date.now();
+        logsEl.innerHTML = "";
+
+        setStatus("Initializing...", "connecting");
+        log("Starting voice agent connection");
+        audioEl.play();
+
+        // 1) Get mic with user-selected constraints
+        const constraints = { audio: true };
+        try {
+          localStream = await navigator.mediaDevices.getUserMedia(
+            constraints,
+          );
+          log("Microphone access granted");
+        } catch (e) {
+          setStatus("Microphone denied", "disconnected");
+          log("getUserMedia error:", e.message || e);
+          return;
+        }
+
+        // 2) Create RTCPeerConnection
+        pc = new RTCPeerConnection({});
+        pc.onconnectionstatechange = () => {
+          log("Connection state:", pc.connectionState);
+          if (pc.connectionState === "connected") {
+            setStatus("Connected", "connected");
+          } else if (pc.connectionState === "failed") {
+            setStatus("Connection failed", "failed");
+          } else if (pc.connectionState === "disconnected") {
+            setStatus("Connection interrupted", "disconnected");
+          }
+        };
+
+        // 3) Set up remote audio
+        pc.ontrack = (ev) => {
+          if (ev.track.kind === "audio") {
+            log("Received remote audio track");
+            audioEl.srcObject = ev.streams[0] ||
+              new MediaStream([ev.track]);
+          }
+        };
+
+        // 4) Add mic track(s)
+        localStream.getTracks().forEach((t) =>
+          pc.addTrack(t, localStream)
+        );
+        log("Added local audio track");
+
+        // 5) Create Offer and send immediately
+        log("Creating offer and connecting to server...");
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        // 6) POST SDP offer to /rtc immediately (WHIP-style).
+        // Server will provide the session configuration.
+        try {
+          const resp = await fetch("/rtc", {
+            method: "POST",
+            headers: { "Content-Type": "application/sdp" },
+            body: offer.sdp,
+          });
+
+          if (!resp.ok) {
+            const errText = await resp.text().catch(() => "<no body>");
+            throw new Error(`Server error: ${resp.status} ${errText}`);
+          }
+
+          const answerSdp = await resp.text();
+          await pc.setRemoteDescription({
+            type: "answer",
+            sdp: answerSdp,
+          });
+        } catch (error) {
+          log("Connection failed:", error.message);
+          setStatus("Connection failed", "disconnected");
+          await stop();
+        }
+      }
+
+      async function stop() {
+        log("Stopping voice agent connection");
+        setStatus("Disconnecting...", "connecting");
+
+        try {
+          if (pc) {
+            pc.getSenders().forEach((s) => {
+              try {
+                s.track && s.track.stop();
+              } catch {}
+            });
+            pc.getReceivers().forEach((r) => {
+              try {
+                r.track && r.track.stop();
+              } catch {}
+            });
+            pc.ontrack = null;
+            pc.close();
+          }
+        } finally {
+          pc = null;
+        }
+
+        if (localStream) {
+          localStream.getTracks().forEach((t) => {
+            try {
+              t.stop();
+            } catch {}
+          });
+          localStream = null;
+        }
+
+        audioEl.srcObject = null;
+        setStatus("Disconnected", "disconnected");
+        log("Connection stopped");
+
+        // Reset call timer
+        callStartTime = null;
+      }
+
+      btnStart.addEventListener("click", start);
+
+      // Close gracefully on unload
+      window.addEventListener("beforeunload", stop);
+
+      // Initialize
+      log("Voice agent interface loaded");
+      setStatus("Disconnected", "disconnected");
+    </script>
+  </body>
+</html>
