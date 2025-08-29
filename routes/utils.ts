@@ -15,8 +15,8 @@ export function makeHeaders(contentType?: string) {
   return obj;
 }
 
-export function makeSession() {
-  return {
+export function makeSession(video: boolean) {
+  const session = {
     type: "realtime",
     model: MODEL,
     instructions: INSTRUCTIONS,
@@ -24,8 +24,13 @@ export function makeSession() {
       input: { noise_reduction: { type: "near_field" } },
       output: { voice: VOICE },
     },
-    video: {
+  }
+
+  if (video) {
+    session["video"] = {
       input: { enabled: true },
-    },
-  };
+    };
+  }
+
+  return session;
 }

@@ -212,20 +212,20 @@
           <div class="video-option">
             <input
               type="radio"
-              id="videoScreen"
-              name="videoMode"
-              value="screen"
-            />
-            <label for="videoScreen">Screen</label>
-          </div>
-          <div class="video-option">
-            <input
-              type="radio"
               id="videoWebcam"
               name="videoMode"
               value="webcam"
             />
             <label for="videoWebcam">Webcam</label>
+          </div>
+          <div class="video-option">
+            <input
+              type="radio"
+              id="videoScreen"
+              name="videoMode"
+              value="screen"
+            />
+            <label for="videoScreen">Screen</label>
           </div>
         </div>
       </div>
@@ -459,7 +459,7 @@
         // 6) POST SDP offer to /rtc immediately (WHIP-style).
         // Server will provide the session configuration.
         try {
-          const resp = await fetch("/rtc", {
+          const resp = await fetch(videoMode !== "none" ? "/rtc?video=true" : "/rtc", {
             method: "POST",
             headers: { "Content-Type": "application/sdp" },
             body: offer.sdp,

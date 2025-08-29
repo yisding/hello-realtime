@@ -5,12 +5,16 @@ const rtc = new Hono();
 
 // POST /rtc : create a new call
 rtc.post("/", async (c) => {
+  // Parse video flag from query (?video=true)
+  const reqUrl = new URL(c.req.url);
+  const video = reqUrl.searchParams.get("video") === "true";
+
   // Create the call.
   const url = "https://api.openai.com/v1/realtime/calls";
   const headers = makeHeaders();
   const fd = new FormData();
   fd.set("sdp", await c.req.text());
-  fd.set("session", JSON.stringify(makeSession()));
+  fd.set("session", JSON.stringify(makeSession(video)));
   const opts = { method: "POST", headers, body: fd };
   const resp = await fetch(url, opts);
   if (!resp.ok) {
