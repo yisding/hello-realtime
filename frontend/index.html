@@ -236,14 +236,17 @@
           isConnected = true;
           btnStart.textContent = "Stop";
           btnStart.disabled = false;
+          screenCaptureCheckbox.disabled = true;
         } else if (ledState === "connecting") {
           isConnected = false;
           btnStart.textContent = "Start";
           btnStart.disabled = true;
+          screenCaptureCheckbox.disabled = true;
         } else {
           isConnected = false;
           btnStart.textContent = "Start";
           btnStart.disabled = false;
+          screenCaptureCheckbox.disabled = false;
         }
       }
 
