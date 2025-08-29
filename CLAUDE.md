@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Hello Realtime is an OpenAI Realtime API demo application supporting both WebRTC and SIP users. It's built on Val Town's Deno runtime with TypeScript and uses the Hono framework for routing.
+Hello Realtime is an OpenAI Realtime API demo application supporting WebRTC users. It's built on Val Town's Deno runtime with TypeScript and uses the Hono framework for routing.
 
 ## Commands
 
 ### Development
 - **Run locally**: Deploy to Val Town platform - no local dev server
-- **Test deployment**: Visit https://hello-realtime.val.run for WebRTC or call 425-800-0042 for SIP
+- **Test deployment**: Visit https://hello-realtime.val.run for WebRTC
 
 ## Architecture
 
@@ -18,7 +18,7 @@ Hello Realtime is an OpenAI Realtime API demo application supporting both WebRTC
 
 1. **Main Entry Point** (`main.tsx`)
    - Hono app with route mounting
-   - Routes: `/rtc`, `/sip`, `/observer`
+   - Routes: `/rtc`, `/observer`
    - Serves frontend from `/frontend/index.html`
 
 2. **WebRTC Route** (`routes/rtc.ts`)
@@ -26,17 +26,12 @@ Hello Realtime is an OpenAI Realtime API demo application supporting both WebRTC
    - Handles SDP offer/answer exchange
    - Triggers observer WebSocket connection
 
-3. **SIP Route** (`routes/sip.ts`)
-   - Webhook endpoint for incoming phone calls
-   - Verifies signatures using Svix
-   - Accepts calls and triggers observer
-
-4. **Observer Route** (`routes/observer.ts`)
+3. **Observer Route** (`routes/observer.ts`)
    - Establishes WebSocket connection to OpenAI
    - Monitors call events and transcripts
    - Auto-sends `response.create` after connection
 
-5. **Utilities** (`routes/utils.ts`)
+4. **Utilities** (`routes/utils.ts`)
    - `makeHeaders()`: Adds OpenAI API authentication
    - `makeSession()`: Configures Realtime session with model, instructions, and voice settings
 
@@ -50,7 +45,6 @@ Hello Realtime is an OpenAI Realtime API demo application supporting both WebRTC
 
 Required:
 - `OPENAI_API_KEY`: For all OpenAI API calls
-- `OPENAI_SIGNING_SECRET`: Required for SIP webhook verification (optional if only using WebRTC)
 
 ## Val Town Specifics
 
