@@ -5,12 +5,10 @@ import {
 } from "https://esm.town/v/std/utils@85-main/index.ts";
 // import mcp from "./routes/mcp.ts";
 import rtc from "./routes/rtc.ts";
-import sip from "./routes/sip.ts";
 import observer from "./routes/observer.ts";
 
 const app = new Hono();
 app.route("/rtc", rtc);
-app.route("/sip", sip);
 app.route("/observer", observer);
 // app.route("/mcp", mcp);
 
