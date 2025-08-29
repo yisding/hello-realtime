@@ -1,16 +1,21 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with
+code in this repository.
 
 ## Project Overview
 
-Hello Realtime is an OpenAI Realtime API demo application supporting both WebRTC and SIP users. It's built on Val Town's Deno runtime with TypeScript and uses the Hono framework for routing.
+Hello Realtime is an OpenAI Realtime API demo application supporting WebRTC
+users. It's built on Val Town's Deno runtime with TypeScript and uses the Hono
+framework for routing.
 
 ## Commands
 
 ### Development
+
 - **Run locally**: Deploy to Val Town platform - no local dev server
-- **Test deployment**: Visit https://hello-realtime.val.run for WebRTC or call 425-800-0042 for SIP
+- **Test deployment**: Visit https://hello-realtime.val.run for WebRTC
+- **Format** Run `deno fmt`
 
 ## Architecture
 
@@ -38,9 +43,11 @@ Hello Realtime is an OpenAI Realtime API demo application supporting both WebRTC
 
 5. **Utilities** (`routes/utils.ts`)
    - `makeHeaders()`: Adds OpenAI API authentication
-   - `makeSession()`: Configures Realtime session with model, instructions, and voice settings
+   - `makeSession()`: Configures Realtime session with model, instructions, and
+     voice settings
 
 ### Frontend
+
 - Single-page vanilla JavaScript application (`frontend/index.html`)
 - WebRTC peer connection management
 - Real-time status indicators and logging
@@ -49,12 +56,14 @@ Hello Realtime is an OpenAI Realtime API demo application supporting both WebRTC
 ## Environment Variables
 
 Required:
+
 - `OPENAI_API_KEY`: For all OpenAI API calls
 - `OPENAI_SIGNING_SECRET`: Required for SIP webhook verification (optional if only using WebRTC)
 
 ## Val Town Specifics
 
-- Uses Val Town's file reading utilities from `https://esm.town/v/std/utils@85-main/index.ts`
+- Uses Val Town's file reading utilities from
+  `https://esm.town/v/std/utils@85-main/index.ts`
 - Deno runtime with TypeScript support
 - No local development server - deploy directly to Val Town
 - Import npm packages via `npm:` prefix (e.g., `npm:hono`)

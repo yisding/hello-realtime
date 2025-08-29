@@ -41,6 +41,21 @@
         align-items: center;
         gap: 20px;
       }
+      .screen-capture-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+      }
+      .screen-capture-wrapper input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+      .screen-capture-wrapper label {
+        cursor: pointer;
+        user-select: none;
+      }
       .toolbar-right {
         display: flex;
         align-items: center;
@@ -152,6 +167,10 @@
       <div class="toolbar-left">
         <h1>Realtime Agent</h1>
         <button id="btnStart" class="primary">Start</button>
+        <div class="screen-capture-wrapper">
+          <input type="checkbox" id="screenCaptureCheckbox" />
+          <label for="screenCaptureCheckbox">Share Screen</label>
+        </div>
       </div>
       <div class="toolbar-right">
         <span class="status-text" id="statusText">Disconnected</span>
@@ -170,9 +189,11 @@
       const statusLedEl = $("statusLed");
       const audioEl = $("remoteAudio");
       const btnStart = $("btnStart");
+      const screenCaptureCheckbox = $("screenCaptureCheckbox");
 
       let pc = null;
       let localStream = null;
+      let screenStream = null;
       let isConnected = false;
       let callStartTime = null;
 
@@ -282,6 +303,32 @@
         );
         log("Added local audio track");
 
+        // 4b) Add screen capture if checkbox is checked
+        if (screenCaptureCheckbox.checked) {
+          try {
+            screenStream = await navigator.mediaDevices.getDisplayMedia(
+              {
+                video: true,
+                audio: false,
+              },
+            );
+            screenStream.getTracks().forEach((t) =>
+              pc.addTrack(t, screenStream)
+            );
+            log("Added screen capture video track");
+
+            // Handle screen share ending
+            screenStream.getVideoTracks()[0].onended = () => {
+              log("Screen sharing stopped");
+              screenCaptureCheckbox.checked = false;
+              screenStream = null;
+            };
+          } catch (e) {
+            log("Screen capture denied or failed:", e.message || e);
+            screenCaptureCheckbox.checked = false;
+          }
+        }
+
         // 5) Create Offer and send immediately
         log("Creating offer and connecting to server...");
         const offer = await pc.createOffer();
@@ -343,6 +390,16 @@
             } catch {}
           });
           localStream = null;
+        }
+
+        if (screenStream) {
+          screenStream.getTracks().forEach((t) => {
+            try {
+              t.stop();
+            } catch {}
+          });
+          screenStream = null;
+          screenCaptureCheckbox.checked = false;
         }
 
         audioEl.srcObject = null;
