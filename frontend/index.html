@@ -41,20 +41,30 @@
         align-items: center;
         gap: 20px;
       }
-      .screen-capture-wrapper {
+      .video-options {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 16px;
         font-size: 14px;
       }
-      .screen-capture-wrapper input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
-        cursor: pointer;
+      .video-option {
+        display: flex;
+        align-items: center;
+        gap: 6px;
       }
-      .screen-capture-wrapper label {
+      .video-option input[type="radio"] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        margin: 0;
+      }
+      .video-option label {
         cursor: pointer;
         user-select: none;
+      }
+      .video-option input[type="radio"]:disabled + label {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
       .toolbar-right {
         display: flex;
@@ -188,9 +198,35 @@
       <div class="toolbar-left">
         <h1>Realtime Agent</h1>
         <button id="btnStart" class="primary">Start</button>
-        <div class="screen-capture-wrapper">
-          <input type="checkbox" id="screenCaptureCheckbox" />
-          <label for="screenCaptureCheckbox">Share Screen</label>
+        <div class="video-options">
+          <div class="video-option">
+            <input
+              type="radio"
+              id="videoNone"
+              name="videoMode"
+              value="none"
+              checked
+            />
+            <label for="videoNone">Audio Only</label>
+          </div>
+          <div class="video-option">
+            <input
+              type="radio"
+              id="videoScreen"
+              name="videoMode"
+              value="screen"
+            />
+            <label for="videoScreen">Screen</label>
+          </div>
+          <div class="video-option">
+            <input
+              type="radio"
+              id="videoWebcam"
+              name="videoMode"
+              value="webcam"
+            />
+            <label for="videoWebcam">Webcam</label>
+          </div>
         </div>
       </div>
       <div class="toolbar-right">
@@ -215,15 +251,37 @@
       const statusLedEl = $("statusLed");
       const audioEl = $("remoteAudio");
       const btnStart = $("btnStart");
-      const screenCaptureCheckbox = $("screenCaptureCheckbox");
       const screenPreviewEl = $("screenPreview");
       const screenVideoEl = $("screenVideo");
 
       let pc = null;
       let localStream = null;
-      let screenStream = null;
+      let videoStream = null;
       let isConnected = false;
       let callStartTime = null;
+
+      function getVideoMode() {
+        const selected = document.querySelector(
+          'input[name="videoMode"]:checked',
+        );
+        return selected ? selected.value : "none";
+      }
+
+      function disableVideoOptions() {
+        document.querySelectorAll('input[name="videoMode"]').forEach(
+          (input) => {
+            input.disabled = true;
+          },
+        );
+      }
+
+      function enableVideoOptions() {
+        document.querySelectorAll('input[name="videoMode"]').forEach(
+          (input) => {
+            input.disabled = false;
+          },
+        );
+      }
 
       function formatTimestamp() {
         if (!callStartTime) {
@@ -264,17 +322,17 @@
           isConnected = true;
           btnStart.textContent = "Stop";
           btnStart.disabled = false;
-          screenCaptureCheckbox.disabled = true;
+          disableVideoOptions();
         } else if (ledState === "connecting") {
           isConnected = false;
           btnStart.textContent = "Start";
           btnStart.disabled = true;
-          screenCaptureCheckbox.disabled = true;
+          disableVideoOptions();
         } else {
           isConnected = false;
           btnStart.textContent = "Start";
           btnStart.disabled = false;
-          screenCaptureCheckbox.disabled = false;
+          enableVideoOptions();
         }
       }
 
@@ -293,16 +351,39 @@
         log("Starting voice agent connection");
         audioEl.play();
 
-        // 1) Get mic with user-selected constraints
-        const constraints = { audio: true };
+        // 1) Get mic (and optionally webcam) with user-selected constraints
+        const videoMode = getVideoMode();
+        const constraints = {
+          audio: true,
+          video: videoMode === "webcam" ? true : false,
+        };
         try {
           localStream = await navigator.mediaDevices.getUserMedia(
             constraints,
           );
-          log("Microphone access granted");
+          log(
+            videoMode === "webcam"
+              ? "Microphone and webcam access granted"
+              : "Microphone access granted",
+          );
+
+          // Show webcam preview if using webcam
+          if (videoMode === "webcam") {
+            screenVideoEl.srcObject = localStream;
+            screenPreviewEl.classList.add("active");
+          }
         } catch (e) {
-          setStatus("Microphone denied", "disconnected");
+          setStatus(
+            videoMode === "webcam"
+              ? "Microphone/webcam denied"
+              : "Microphone denied",
+            "disconnected",
+          );
           log("getUserMedia error:", e.message || e);
+          if (videoMode === "webcam") {
+            // Reset to audio only on failure
+            document.getElementById("videoNone").checked = true;
+          }
           return;
         }
 
@@ -328,41 +409,45 @@
           }
         };
 
-        // 4) Add mic track(s)
+        // 4) Add mic track(s) and webcam if selected
         localStream.getTracks().forEach((t) =>
           pc.addTrack(t, localStream)
         );
-        log("Added local audio track");
+        if (videoMode === "webcam") {
+          log("Added local audio and webcam tracks");
+        } else {
+          log("Added local audio track");
+        }
 
-        // 4b) Add screen capture if checkbox is checked
-        if (screenCaptureCheckbox.checked) {
+        // 4b) Add screen capture if selected
+        if (videoMode === "screen") {
           try {
-            screenStream = await navigator.mediaDevices.getDisplayMedia(
+            videoStream = await navigator.mediaDevices.getDisplayMedia(
               {
                 video: true,
                 audio: false,
               },
             );
-            screenStream.getTracks().forEach((t) =>
-              pc.addTrack(t, screenStream)
+            videoStream.getTracks().forEach((t) =>
+              pc.addTrack(t, videoStream)
             );
             log("Added screen capture video track");
 
             // Show screen preview
-            screenVideoEl.srcObject = screenStream;
+            screenVideoEl.srcObject = videoStream;
             screenPreviewEl.classList.add("active");
 
             // Handle screen share ending
-            screenStream.getVideoTracks()[0].onended = () => {
+            videoStream.getVideoTracks()[0].onended = () => {
               log("Screen sharing stopped");
-              screenCaptureCheckbox.checked = false;
               screenVideoEl.srcObject = null;
               screenPreviewEl.classList.remove("active");
-              screenStream = null;
+              videoStream = null;
             };
           } catch (e) {
             log("Screen capture denied or failed:", e.message || e);
-            screenCaptureCheckbox.checked = false;
+            // Reset to audio only on failure
+            document.getElementById("videoNone").checked = true;
           }
         }
 
@@ -429,17 +514,18 @@
           localStream = null;
         }
 
-        if (screenStream) {
-          screenStream.getTracks().forEach((t) => {
+        if (videoStream) {
+          videoStream.getTracks().forEach((t) => {
             try {
               t.stop();
             } catch {}
           });
-          screenStream = null;
-          screenCaptureCheckbox.checked = false;
-          screenVideoEl.srcObject = null;
-          screenPreviewEl.classList.remove("active");
+          videoStream = null;
         }
+
+        // Clear video preview regardless of source
+        screenVideoEl.srcObject = null;
+        screenPreviewEl.classList.remove("active");
 
         audioEl.srcObject = null;
         setStatus("Disconnected", "disconnected");

@@ -1,8 +1,5 @@
 import { Hono } from "npm:hono";
-import {
-  readFile,
-  serveFile,
-} from "https://esm.town/v/std/utils@85-main/index.ts";
+import { readFile } from "https://esm.town/v/std/utils@85-main/index.ts";
 // import mcp from "./routes/mcp.ts";
 import rtc from "./routes/rtc.ts";
 import observer from "./routes/observer.ts";
