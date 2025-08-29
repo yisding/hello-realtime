@@ -58,7 +58,8 @@ framework for routing.
 Required:
 
 - `OPENAI_API_KEY`: For all OpenAI API calls
-- `OPENAI_SIGNING_SECRET`: Required for SIP webhook verification (optional if only using WebRTC)
+- `OPENAI_SIGNING_SECRET`: Required for SIP webhook verification (optional if
+  only using WebRTC)
 
 ## Val Town Specifics
 

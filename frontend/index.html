@@ -147,6 +147,27 @@
         line-height: 1.4;
         white-space: pre-wrap;
       }
+      .screen-preview {
+        display: none;
+        width: 100%;
+        max-width: 100%;
+        margin-bottom: 20px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        background: rgba(0, 0, 0, 0.35);
+        overflow: hidden;
+      }
+      .screen-preview.active {
+        display: block;
+      }
+      .screen-preview video {
+        width: 100%;
+        height: auto;
+        display: block;
+        max-height: 400px;
+        object-fit: contain;
+        background: #000;
+      }
       .log-entry {
         margin-bottom: 4px;
       }
@@ -178,7 +199,12 @@
       </div>
     </div>
 
-    <div class="logs" id="logs"></div>
+    <div class="logs-container">
+      <div class="screen-preview" id="screenPreview">
+        <video id="screenVideo" autoplay playsinline muted></video>
+      </div>
+      <div class="logs" id="logs"></div>
+    </div>
 
     <audio id="remoteAudio" autoplay playsinline></audio>
 
@@ -190,6 +216,8 @@
       const audioEl = $("remoteAudio");
       const btnStart = $("btnStart");
       const screenCaptureCheckbox = $("screenCaptureCheckbox");
+      const screenPreviewEl = $("screenPreview");
+      const screenVideoEl = $("screenVideo");
 
       let pc = null;
       let localStream = null;
@@ -320,10 +348,16 @@
             );
             log("Added screen capture video track");
 
+            // Show screen preview
+            screenVideoEl.srcObject = screenStream;
+            screenPreviewEl.classList.add("active");
+
             // Handle screen share ending
             screenStream.getVideoTracks()[0].onended = () => {
               log("Screen sharing stopped");
               screenCaptureCheckbox.checked = false;
+              screenVideoEl.srcObject = null;
+              screenPreviewEl.classList.remove("active");
               screenStream = null;
             };
           } catch (e) {
@@ -403,6 +437,8 @@
           });
           screenStream = null;
           screenCaptureCheckbox.checked = false;
+          screenVideoEl.srcObject = null;
+          screenPreviewEl.classList.remove("active");
         }
 
         audioEl.srcObject = null;
