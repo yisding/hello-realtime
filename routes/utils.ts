@@ -26,11 +26,5 @@ export function makeSession(video: boolean) {
     },
   };
 
-  if (video) {
-    session["video"] = {
-      input: { enabled: true },
-    };
-  }
-
   return session;
 }
